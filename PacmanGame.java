@@ -28,6 +28,7 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
 
     private int score = 0;
     private boolean gameStarted = false;
+    private boolean gamePaused = false;
     private boolean gameWon = false;
 
     private final int gameUpdateDelay = 16; // About 60 frames per second
@@ -98,7 +99,7 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
     }
 
     private void movePacman() {
-        if (!gameStarted || gameWon) {
+        if (!gameStarted || gameWon || gamePaused) {
             return;
         }
 
@@ -180,7 +181,11 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
         drawScore(g);
 
         if (!gameStarted) {
-            drawWinMessage(g);
+            drawStartScreen(g);
+        }
+
+        if (gamePaused) {
+            drawPauseScreen(g);
         }
 
         if (gameWon) {
@@ -257,6 +262,20 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
         g.drawString("Press ENTER or SPACE", 130, 275);
     }
 
+    private void drawPauseScreen(Graphics g) {
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillRect(0, 0, cols * tileSize, rows * tileSize + 40);
+
+        g.setColor(Color.YELLOW);
+        g.setFont(new Font("Arial", Font.BOLD, 36));
+        g.drawString("PAUSED", 150, 240);
+
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 16));
+        g.drawString("Press P or ESC to continue", 120, 275);
+    }
+
+
     private void drawWinMessage(Graphics g) {
         g.setColor(Color.YELLOW);
         g.setFont(new Font("Arial", Font.BOLD, 28));
@@ -272,7 +291,7 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
     }
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (gameStarted && !gameWon) {
+        if (gameStarted && !gamePaused && !gameWon) {
             updatePacmanMouth();
         }
         movePacman();
@@ -283,10 +302,25 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
 
-        if (!gameStarted && (key == KeyEvent.VK_ENTER || key == KeyEvent.VK_SPACE)){
+        if (!gameStarted && (key == KeyEvent.VK_ENTER || key == KeyEvent.VK_SPACE)) {
             gameStarted = true;
+            gamePaused = false;
+            directionRow = 0;
+            directionCol = 1;
+            nextDirectionRow = 0;
+            nextDirectionCol = 1;
             return;
         }
+
+        if (gameStarted && !gameWon && (key == KeyEvent.VK_ESCAPE)) {
+            gamePaused = !gamePaused;
+            return ;
+        }
+
+        if (gamePaused) {
+            return;
+        }
+
         if (key == KeyEvent.VK_UP) {
             nextDirectionRow = -1;
             nextDirectionCol = 0;
