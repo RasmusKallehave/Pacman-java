@@ -14,6 +14,12 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
     private int pacmanRow = 15;
     private int pacmanCol = 9;
 
+    private double pacmanX = pacmanCol * tileSize;
+    private double pacmanY = pacmanRow * tileSize;
+    private int targetRow = pacmanRow;
+    private int targetCol = pacmanCol;
+    private boolean pacmanIsMoving = false;
+
     private int directionRow = 0;
     private int directionCol = 0;
 
@@ -22,6 +28,9 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
 
     private int score = 0;
     private boolean gameWon = false;
+
+    private final int gameUpdateDelay = 16; // About 60 framse per second
+    private final double pacmanSpeed = 2.0; // picels pac-man moves per frame
 
     private final String[] map = {
 
@@ -51,14 +60,14 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
     private final Set<Point> dots = new HashSet<>();
 
     public PacmanGame() {
-        setPreferredSize(new Dimension(cols * tileSize, rows * tileSize * 40));
+        setPreferredSize(new Dimension(cols * tileSize, rows * tileSize + 40)); //Size of the window
         setBackground(Color.BLACK);
         setFocusable(true);
         addKeyListener(this);
 
         loadDots();
 
-        timer = new Timer(120, this);
+        timer = new Timer(gameUpdateDelay, this); 
         timer.start();
     }
 
@@ -85,6 +94,11 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
             return;
         }
 
+        if (pacmanIsMoving) {
+            movePacmanTowardsTarget();
+            return;
+        }
+        
         int wantedRow = pacmanRow + nextDirectionRow;
         int wantedCol = pacmanCol + nextDirectionCol;
 
@@ -97,21 +111,45 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
         int newCol = pacmanCol + directionCol;
 
         if (!isWall(newRow, newCol)) {
-            pacmanRow = newRow;
-            pacmanCol = newCol;
-        }
-
-        Point currentPosition = new Point(pacmanCol, pacmanRow);
-
-        if (dots.remove(currentPosition)) {
-            score += 10;
-        }
-
-        if (dots.isEmpty()) {
-            gameWon = true;
-            timer.stop();
+            targetRow = newRow;
+            targetCol = newCol;
+            pacmanIsMoving = true;
         }
     }
+
+    private void movePacmanTowardsTarget() {
+        double targetX = targetCol * tileSize;
+        double targetY = targetRow * tileSize;
+
+        if (pacmanX < targetX) {
+            pacmanX = Math.min(pacmanX + pacmanSpeed, targetX);
+        } else if (pacmanX > targetX) {
+            pacmanX = Math.max(pacmanX - pacmanSpeed, targetX);
+        }
+
+        if (pacmanY < targetY) {
+            pacmanY = Math.min(pacmanY + pacmanSpeed, targetY);
+        } else if (pacmanY > targetY) {
+            pacmanY = Math.max(pacmanY - pacmanSpeed, targetY);
+        }
+
+        if (pacmanX == targetX && pacmanY == targetY) {
+            pacmanRow = targetRow;
+            pacmanCol = targetCol;
+            pacmanIsMoving = false;
+
+            Point currentPosition = new Point(pacmanCol, pacmanRow);
+
+            if (dots.remove(currentPosition)) {
+                score += 10;
+            }
+
+            if (dots.isEmpty()) {
+                gameWon = true;
+            }
+        }
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -153,8 +191,8 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
     }
 
     private void drawPacman(Graphics g) {
-        int x = pacmanCol * tileSize + 2;
-        int y = pacmanRow * tileSize + 2;
+        int x = (int) pacmanX + 2;
+        int y = (int) pacmanY + 2;
 
         g.setColor(Color.YELLOW);
 
