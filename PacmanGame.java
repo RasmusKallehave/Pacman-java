@@ -27,10 +27,14 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
     private int nextDirectionCol = 0;
 
     private int score = 0;
+    private boolean gameStarted = false;
     private boolean gameWon = false;
 
-    private final int gameUpdateDelay = 16; // About 60 framse per second
-    private final double pacmanSpeed = 2.0; // picels pac-man moves per frame
+    private final int gameUpdateDelay = 16; // About 60 frames per second
+    private final double pacmanSpeed = 2.0; // pixels pac-man moves per frame (speed)
+
+    private int mouthSize = 35; 
+    private int mouthChange = 3;
 
     private final String[] map = {
 
@@ -82,15 +86,19 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
     }
 
     private boolean isWall(int row, int col) {
-        if (row < 0 || row >= rows || col < 0 || col >= cols) {
+        if (row < 0 || row >= rows) {
             return true;
+        }
+
+        if (col < 0 || col >= cols) {
+            return false;
         }
 
         return map[row].charAt(col) == '#';
     }
 
     private void movePacman() {
-        if (gameWon) {
+        if (!gameStarted || gameWon) {
             return;
         }
 
@@ -111,9 +119,21 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
         int newCol = pacmanCol + directionCol;
 
         if (!isWall(newRow, newCol)) {
-            targetRow = newRow;
-            targetCol = newCol;
-            pacmanIsMoving = true;
+            if (newCol < 0) {
+                pacmanCol = cols - 1;
+                pacmanX = pacmanCol * tileSize;
+                targetRow = pacmanRow;
+                targetCol = pacmanCol;
+            } else if (newCol >= cols) {
+                pacmanCol = 0;
+                pacmanX = pacmanCol * tileSize;
+                targetRow = pacmanRow;
+                targetCol = pacmanCol;
+            } else {
+                targetRow = newRow;
+                targetCol = newCol;
+                pacmanIsMoving = true;
+            }
         }
     }
 
@@ -159,6 +179,10 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
         drawPacman(g);
         drawScore(g);
 
+        if (!gameStarted) {
+            drawWinMessage(g);
+        }
+
         if (gameWon) {
             drawWinMessage(g);
         }
@@ -199,18 +223,19 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
         int mouthStartAngle;
 
         if (directionCol == 1) {
-            mouthStartAngle = 35;
+            mouthStartAngle = mouthSize;
         } else if (directionCol == -1) {
-            mouthStartAngle = 215;
+            mouthStartAngle = 180 + mouthSize;
         } else if (directionRow == -1) {
-            mouthStartAngle = 125;
+            mouthStartAngle = 90 + mouthSize;
         } else if (directionRow == 1) {
-            mouthStartAngle = 305;
+            mouthStartAngle = 270 + mouthSize;
         } else {
-            mouthStartAngle = 35;
+            mouthStartAngle = mouthSize;
         }
 
-        g.fillArc(x, y, tileSize - 4, tileSize - 4, mouthStartAngle, 290);
+        int arcAngle = 360 - mouthSize * 2;
+        g.fillArc(x, y, tileSize - 4, tileSize - 4, mouthStartAngle, arcAngle);    
     }
 
     private void drawScore(Graphics g) {
@@ -219,14 +244,37 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
         g.drawString("Score: " + score, 10, rows * tileSize + 28);
     }
 
+    private void drawStartScreen(Graphics g) {
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillRect(0, 0, cols * tileSize, rows * tileSize + 40);
+
+        g.setColor(Color.YELLOW);
+        g.setFont(new Font("Arial", Font.BOLD, 36));
+        g.drawString("START GAME", 105, 240);
+
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 16));
+        g.drawString("Press ENTER or SPACE", 130, 275);
+    }
+
     private void drawWinMessage(Graphics g) {
         g.setColor(Color.YELLOW);
         g.setFont(new Font("Arial", Font.BOLD, 28));
         g.drawString("YOU WIN!", 135, 260);
     }
 
+    private void updatePacmanMouth() {
+        mouthSize += mouthChange;
+
+        if (mouthSize >= 40 || mouthSize <= 5) {
+            mouthChange *= -1;
+        }
+    }
     @Override
     public void actionPerformed(ActionEvent e) {
+        if (gameStarted && !gameWon) {
+            updatePacmanMouth();
+        }
         movePacman();
         repaint();
     }
@@ -235,6 +283,10 @@ public class PacmanGame extends JPanel implements ActionListener, KeyListener {
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
 
+        if (!gameStarted && (key == KeyEvent.VK_ENTER || key == KeyEvent.VK_SPACE)){
+            gameStarted = true;
+            return;
+        }
         if (key == KeyEvent.VK_UP) {
             nextDirectionRow = -1;
             nextDirectionCol = 0;
