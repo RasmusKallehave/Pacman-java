@@ -12,6 +12,9 @@ public class Ghost {
     private final int rows;
     private final int cols;
 
+    private final int startRow;
+    private final int startCol;
+
     private int row;
     private int col;
 
@@ -25,6 +28,7 @@ public class Ghost {
     private int directionCol = 1;
 
     private boolean isMoving = false;
+    private boolean vulnerable = false;
 
     private final double speed;
     private final Color color;
@@ -33,6 +37,8 @@ public class Ghost {
     private final Random random = new Random();
 
     public Ghost(int startRow, int startCol, int tileSize, int rows, int cols, double speed, Color color, Personality personality) {
+        this.startRow = startRow;
+        this.startCol = startCol;
         this.row = startRow;
         this.col = startCol;
         this.tileSize = tileSize;
@@ -62,7 +68,11 @@ public class Ghost {
         int drawY = (int) y + 2;
         int size = tileSize - 4;
 
-        g.setColor(color);
+        if (vulnerable) {
+            g.setColor(new Color(30, 60, 255));
+        } else {
+            g.setColor(color);
+        }
 
         // Ghost head
         g.fillArc(drawX, drawY, size, size, 0, 180);
@@ -88,6 +98,11 @@ public class Ghost {
     }
 
     private void chooseNewDirection(int pacmanRow, int pacmanCol, int pacmanDirectionRow, int pacmanDirectionCol) {
+        if (vulnerable) {
+            chooseDirectionAwayFrom(pacmanRow, pacmanCol);
+            return;
+        }
+
         int targetPersonalityRow = pacmanRow;
         int targetPersonalityCol = pacmanCol;
 
@@ -137,14 +152,49 @@ public class Ghost {
         startMoving(bestDirectionRow, bestDirectionCol);
     }
 
+    private void chooseDirectionAwayFrom(int wantedRow, int wantedCol) {
+        int[][] possibleDirections = {
+                {-1, 0},
+                {1, 0},
+                {0, -1},
+                {0, 1}
+        };
+
+        int bestDirectionRow = 0;
+        int bestDirectionCol = 0;
+        double bestDistance = -1;
+
+        for (int[] direction : possibleDirections) {
+            int newRow = row + direction[0];
+            int newCol = col + direction[1];
+
+            if (!isWall(newRow, newCol) && !isOppositeDirection(direction[0], direction[1])) {
+                double distance = distanceToTarget(newRow, newCol, wantedRow, wantedCol);
+
+                    if (distance > bestDistance) {
+                        bestDistance = distance;
+                        bestDirectionRow = direction[0];
+                        bestDirectionCol = direction[1];
+                }
+            }
+        }
+
+        if (bestDistance == -1) {
+            chooseRandomDirection();
+            return;
+        }
+
+        startMoving(bestDirectionRow, bestDirectionCol);
+    }
+
     private void chooseRandomDirection() {
         int[][] possibleDirections = {
                 {-1, 0},
                 {1, 0},
-                {0,-1},
+                {0, -1},
                 {0, 1}
         };
-    
+
         for (int i = 0; i < 10; i++) {
             int[] direction = possibleDirections[random.nextInt(possibleDirections.length)];
 
@@ -221,6 +271,27 @@ public class Ghost {
         }
 
         return GameMap.MAP[checkRow].charAt(checkCol) == '#';
+    }
+
+    public void setVulnerable(boolean vulnerable) {
+        this.vulnerable = vulnerable;
+    }
+
+    public boolean isVulnerable() {
+        return vulnerable;
+    }
+
+    public void resetToStart() {
+        row = startRow;
+        col = startCol;
+        x = startCol * tileSize;
+        y = startRow * tileSize;
+        targetRow = startRow;
+        targetCol = startCol;
+        directionRow = 0;
+        directionCol = 1;
+        isMoving = false;
+        vulnerable = false;
     }
 
     public double getX() {

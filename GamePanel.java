@@ -40,7 +40,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private int mouthSize = 35; 
     private int mouthChange = 3;
 
+    private boolean powerMode = false;
+    private long powerModeStartTime = 0;
+    private final int powerModeDuration = 6000;
+
     private final Set<Point> dots = new HashSet<>();
+    private final Set<Point> powerPellets = new HashSet<>();
     private final List<Ghost> ghosts = new ArrayList<>();
 
     public GamePanel() {
@@ -60,8 +65,13 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private void loadDots() {
         for (int row = 0; row < GameMap.MAP.length; row++) {
             for (int col = 0; col < GameMap.MAP[row].length(); col++) {
-                if (GameMap.MAP[row].charAt(col) == '.') {
-                    dots.add(new Point(col, row));
+                char tile = GameMap.MAP[row].charAt(col);
+                Point dot = new Point(col, row);
+
+                if (tile == '.') {
+                    dots.add(dot);
+                } else if (tile == 'O') {
+                    powerPellets.add(dot);
                 }
             }
         }
@@ -152,7 +162,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
                 score += 10;
             }
 
-            if (dots.isEmpty()) {
+            if (powerPellets.remove(currentPosition)) {
+                score += 50;
+                startPowerMode();
+            }
+
+            if (dots.isEmpty() && powerPellets.isEmpty()) {
                 gameWon = true;
             }
         }
@@ -217,11 +232,18 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private void drawDots(Graphics g) {
         g.setColor(Color.WHITE);
 
-        for (Point dot : dots) { 
+        for (Point dot : dots) {
             int x = dot.x * tileSize + tileSize / 2 - 3;
             int y = dot.y * tileSize + tileSize / 2 - 3;
 
             g.fillOval(x, y, 6, 6);
+        }
+
+        for (Point powerPellet : powerPellets) {
+            int x = powerPellet.x * tileSize + tileSize / 2 - 6;
+            int y = powerPellet.y * tileSize + tileSize / 2 - 6;
+
+            g.fillOval(x, y, 12, 12);
         }
     }
 
@@ -329,6 +351,25 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         }
     }
 
+    private void updatePowerMode() {
+        if (powerMode && System.currentTimeMillis() - powerModeStartTime >= powerModeDuration) {
+            powerMode = false;
+
+            for (Ghost ghost : ghosts) {
+                ghost.setVulnerable(false);
+            }
+        }
+    }
+
+    private void startPowerMode() {
+        powerMode = true;
+        powerModeStartTime = System.currentTimeMillis();
+
+        for (Ghost ghost : ghosts) {
+            ghost.setVulnerable(true);
+        }
+    }
+
     private void checkGhostCollision() {
         Rectangle pacmanBounds = new Rectangle((int) pacmanX + 4, (int)pacmanY + 4, tileSize - 8, tileSize - 8);
 
@@ -336,7 +377,13 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             Rectangle ghostBounds = new Rectangle((int) ghost.getX() + 4, (int) ghost.getY() + 4, tileSize - 8, tileSize - 8);
 
             if (pacmanBounds.intersects(ghostBounds)) {
-                gameOver = true;
+                if (ghost.isVulnerable()) {
+                    score += 200;
+                    ghost.resetToStart();
+                }else {
+                    gameOver = true;
+                }
+
                 return;
             }
         }
@@ -361,11 +408,14 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         gamePaused = false;
         gameWon = false;
         gameOver = false;
+        powerMode = false;
+        powerModeStartTime = 0;
 
         mouthSize = 35;
         mouthChange = 3;
 
         dots.clear();
+        powerPellets.clear();
         ghosts.clear();
         loadDots();
         loadGhosts();
@@ -375,6 +425,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     public void actionPerformed(ActionEvent e) {
         if (gameStarted && !gamePaused && !gameWon && !gameOver) {
             updatePacmanMouth();
+            updatePowerMode();
             updateGhosts();
             movePacman();
             checkGhostCollision();
