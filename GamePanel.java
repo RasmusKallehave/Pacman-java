@@ -3,6 +3,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private final int tileSize = 24;
@@ -38,6 +40,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private int mouthChange = 3;
 
     private final Set<Point> dots = new HashSet<>();
+    private final List<Ghost> ghosts = new ArrayList<>();
 
     public GamePanel() {
         setPreferredSize(new Dimension(cols * tileSize, rows * tileSize + 40)); //Size of the window
@@ -46,10 +49,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         addKeyListener(this);
 
         loadDots();
+        loadGhosts();
 
         timer = new Timer(gameUpdateDelay, this); 
         timer.start();
     }
+
 
     private void loadDots() {
         for (int row = 0; row < GameMap.MAP.length; row++) {
@@ -59,6 +64,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
                 }
             }
         }
+    }
+
+    private void loadGhosts() {
+        ghosts.add(new Ghost(9, 9, tileSize, rows, cols, 1.5, Color.RED, Ghost.Personality.CHASER));
+        ghosts.add(new Ghost(9, 8, tileSize, rows, cols, 1.3, Color.PINK,Ghost.Personality.AMBUSHER ));
+        ghosts.add(new Ghost(9, 10, tileSize, rows, cols, 1.0, Color.CYAN, Ghost.Personality.RANDOM));
     }
 
     private boolean isWall(int row, int col) {
@@ -166,6 +177,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
         drawMaze(g);
         drawDots(g);
+        drawGhosts(g);
         drawPacman(g);
         drawScore(g);
 
@@ -205,6 +217,12 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             int y = dot.y * tileSize + tileSize / 2 - 3;
 
             g.fillOval(x, y, 6, 6);
+        }
+    }
+
+    private void drawGhosts(Graphics g) {
+        for (Ghost ghost : ghosts) {
+            ghost.draw(g);
         }
     }
 
@@ -278,10 +296,18 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             mouthChange *= -1;
         }
     }
+
+    private void updateGhosts() {
+        for (Ghost ghost : ghosts) {
+            ghost.update(pacmanRow, pacmanCol, directionRow, directionCol);
+        }
+    }
+
     @Override
     public void actionPerformed(ActionEvent e) {
         if (gameStarted && !gamePaused && !gameWon) {
             updatePacmanMouth();
+            updateGhosts();
         }
         movePacman();
         repaint();
