@@ -14,6 +14,7 @@ public class Ghost {
 
     private final int startRow;
     private final int startCol;
+    private final int releaseDelay;
 
     private int row;
     private int col;
@@ -29,6 +30,9 @@ public class Ghost {
 
     private boolean isMoving = false;
     private boolean vulnerable = false;
+    private boolean released = false;
+
+    private long waitStartTime;
 
     private final double speed;
     private final Color color;
@@ -36,11 +40,12 @@ public class Ghost {
 
     private final Random random = new Random();
 
-    public Ghost(int startRow, int startCol, int tileSize, int rows, int cols, double speed, Color color, Personality personality) {
+    public Ghost(int startRow, int startCol, int tileSize, int rows, int cols, double speed, Color color, Personality personality, int releaseDelay) {
         this.startRow = startRow;
         this.startCol = startCol;
         this.row = startRow;
         this.col = startCol;
+        this.releaseDelay = releaseDelay;
         this.tileSize = tileSize;
         this.rows = rows;
         this.cols = cols;
@@ -53,9 +58,15 @@ public class Ghost {
 
         this.targetRow = startRow;
         this.targetCol = startCol;
+        this.waitStartTime = System.currentTimeMillis();
     }
 
     public void update(int pacmanRow, int pacmanCol, int pacmanDirectionRow, int pacmanDirectionCol) {
+        if (!released) {
+            tryRelease();
+            return;
+        }
+
         if (isMoving) {
             moveTowardsTarget();
         } else {
@@ -95,6 +106,15 @@ public class Ghost {
         g.setColor(Color.BLUE);
         g.fillOval(drawX + 7, drawY + 10, 3, 3);
         g.fillOval(drawX + size - 9, drawY + 10, 3, 3);
+    }
+
+    private void tryRelease() {
+        if (System.currentTimeMillis() - waitStartTime >= releaseDelay) {
+            released = true;
+            vulnerable = false;
+            directionRow = -1;
+            directionCol = 0;
+        }
     }
 
     private void chooseNewDirection(int pacmanRow, int pacmanCol, int pacmanDirectionRow, int pacmanDirectionCol) {
@@ -296,6 +316,9 @@ public class Ghost {
 
     public void setVulnerable(boolean vulnerable) {
         this.vulnerable = vulnerable;
+        if (released) {
+            this.vulnerable = vulnerable;
+        }
     }
 
     public boolean isVulnerable() {
@@ -313,6 +336,8 @@ public class Ghost {
         directionCol = 1;
         isMoving = false;
         vulnerable = false;
+        released = false;
+        waitStartTime = System.currentTimeMillis();
     }
 
     public double getX() {

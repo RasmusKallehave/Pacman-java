@@ -78,9 +78,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     }
 
     private void loadGhosts() {
-        ghosts.add(new Ghost(9, 9, tileSize, rows, cols, 1.5, Color.RED, Ghost.Personality.CHASER));
-        ghosts.add(new Ghost(9, 8, tileSize, rows, cols, 1.3, Color.PINK,Ghost.Personality.AMBUSHER ));
-        ghosts.add(new Ghost(9, 10, tileSize, rows, cols, 1.0, Color.CYAN, Ghost.Personality.RANDOM));
+        ghosts.add(new Ghost(9, 9, tileSize, rows, cols, 1.5, Color.RED, Ghost.Personality.CHASER, 0));
+        ghosts.add(new Ghost(9, 8, tileSize, rows, cols, 1.3, Color.PINK,Ghost.Personality.AMBUSHER, 3000));
+        ghosts.add(new Ghost(9, 10, tileSize, rows, cols, 1.0, Color.CYAN, Ghost.Personality.RANDOM, 6000));
     }
 
     private boolean isWall(int row, int col) {
@@ -315,7 +315,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private void drawWinMessage(Graphics g) {
         g.setColor(Color.YELLOW);
         g.setFont(new Font("Arial", Font.BOLD, 28));
-        g.drawString("YOU WIN!", 135, 260);
+        g.drawString("YOU WIN!", 145, 260);
 
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 16));
