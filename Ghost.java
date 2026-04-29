@@ -15,6 +15,7 @@ public class Ghost {
     private final int startRow;
     private final int startCol;
     private final int releaseDelay;
+    private final int ghostHouseDoorCol = 9;
 
     private int row;
     private int col;
@@ -31,6 +32,7 @@ public class Ghost {
     private boolean isMoving = false;
     private boolean vulnerable = false;
     private boolean released = false;
+    private boolean flashing = false;
 
     private long waitStartTime;
 
@@ -43,9 +45,11 @@ public class Ghost {
     public Ghost(int startRow, int startCol, int tileSize, int rows, int cols, double speed, Color color, Personality personality, int releaseDelay) {
         this.startRow = startRow;
         this.startCol = startCol;
+        this.releaseDelay = releaseDelay;
+
         this.row = startRow;
         this.col = startCol;
-        this.releaseDelay = releaseDelay;
+
         this.tileSize = tileSize;
         this.rows = rows;
         this.cols = cols;
@@ -58,47 +62,45 @@ public class Ghost {
 
         this.targetRow = startRow;
         this.targetCol = startCol;
+
         this.waitStartTime = System.currentTimeMillis();
     }
 
     public void update(int pacmanRow, int pacmanCol, int pacmanDirectionRow, int pacmanDirectionCol) {
+        if (isMoving) {
+            moveTowardsTarget();
+            return;
+        }
+
         if (!released) {
             tryRelease();
             return;
         }
 
-        if (isMoving) {
-            moveTowardsTarget();
-        } else {
-            chooseNewDirection(pacmanRow, pacmanCol, pacmanDirectionRow, pacmanDirectionCol);
-        }
-    }
+        chooseNewDirection(pacmanRow, pacmanCol, pacmanDirectionRow, pacmanDirectionCol);    }
 
     public void draw(Graphics g) {
         int drawX = (int) x + 2;
         int drawY = (int) y + 2;
         int size = tileSize - 4;
 
-        if (vulnerable) {
+        if (vulnerable && flashing && shouldFlashWhite()) {
+            g.setColor(Color.WHITE);
+        } else if (vulnerable) {
             g.setColor(new Color(30, 60, 255));
         } else {
             g.setColor(color);
         }
 
-        // Ghost head
         g.fillArc(drawX, drawY, size, size, 0, 180);
-
-        // Ghost body
         g.fillRect(drawX, drawY + size / 2, size, size / 2);
 
-        // Small feet
         int footWidth = size / 4;
         g.fillOval(drawX, drawY + size - 6, footWidth, 8);
         g.fillOval(drawX + footWidth, drawY + size - 6, footWidth, 8);
         g.fillOval(drawX + footWidth * 2, drawY + size - 6, footWidth, 8);
         g.fillOval(drawX + footWidth * 3, drawY + size - 6, footWidth, 8);
 
-        // Eyes
         g.setColor(Color.WHITE);
         g.fillOval(drawX + 5, drawY + 7, 6, 8);
         g.fillOval(drawX + size - 11, drawY + 7, 6, 8);
@@ -108,12 +110,31 @@ public class Ghost {
         g.fillOval(drawX + size - 9, drawY + 10, 3, 3);
     }
 
+    private boolean shouldFlashWhite() {
+        return (System.currentTimeMillis() / 200) % 2 == 0;
+    }
+
     private void tryRelease() {
-        if (System.currentTimeMillis() - waitStartTime >= releaseDelay) {
+        if (System.currentTimeMillis() - waitStartTime < releaseDelay) {
+            return;
+        }
+
+        vulnerable = false;
+        flashing = false;
+
+        if (col < ghostHouseDoorCol) {
+            startMoving(0, 1);
+            return;
+        }
+
+        if (col > ghostHouseDoorCol) {
+            startMoving(0, -1);
+            return;
+        }
+
+        if (!isWall(row - 1, col)) {
             released = true;
-            vulnerable = false;
-            directionRow = -1;
-            directionCol = 0;
+            startMoving(-1, 0);
         }
     }
 
@@ -191,10 +212,10 @@ public class Ghost {
             if (!isWall(newRow, newCol) && !isOppositeDirection(direction[0], direction[1])) {
                 double distance = distanceToTarget(newRow, newCol, wantedRow, wantedCol);
 
-                    if (distance > bestDistance) {
-                        bestDistance = distance;
-                        bestDirectionRow = direction[0];
-                        bestDirectionCol = direction[1];
+                if (distance > bestDistance) {
+                    bestDistance = distance;
+                    bestDirectionRow = direction[0];
+                    bestDirectionCol = direction[1];
                 }
             }
         }
@@ -226,58 +247,58 @@ public class Ghost {
                 return;
             }
         }
-            
-            for (int[] direction : possibleDirections) {
-                int newRow = row + direction[0];
-                int newCol = col + direction[1];
 
-                if (!isWall(newRow, newCol)) {
-                    startMoving(direction[0], direction[1]);
-                    return;
-                }
-            }
-        }   
-        
-        private void startMoving(int newDirectionRow, int newDirectionCol) {
-            directionRow = newDirectionRow;
-            directionCol = newDirectionCol;
+        for (int[] direction : possibleDirections) {
+            int newRow = row + direction[0];
+            int newCol = col + direction[1];
 
-            int newRow = row + directionRow;
-            int newCol = col + directionCol;
-
-            if (newCol < 0) {
-                col = cols - 1;
-                x = col * tileSize;
-                targetRow = row;
-                targetCol = col;
-                isMoving = false;
+            if (!isWall(newRow, newCol)) {
+                startMoving(direction[0], direction[1]);
                 return;
             }
+        }
+    }
 
-            if (newCol >= cols) {
-                col = 0;
-                x = col * tileSize;
-                targetRow = row;
-                targetCol = col;
-                isMoving = false;
-                return;
-            }
+    private void startMoving(int newDirectionRow, int newDirectionCol) {
+        directionRow = newDirectionRow;
+        directionCol = newDirectionCol;
 
-            targetRow = newRow;
-            targetCol = newCol;
-            isMoving = true;
+        int newRow = row + directionRow;
+        int newCol = col + directionCol;
+
+        if (newCol < 0) {
+            col = cols - 1;
+            x = col * tileSize;
+            targetRow = row;
+            targetCol = col;
+            isMoving = false;
+            return;
         }
 
-        private boolean isOppositeDirection(int newDirectionRow, int newDirectionCol) {
-            return newDirectionRow == -directionRow && newDirectionCol == -directionCol;
+        if (newCol >= cols) {
+            col = 0;
+            x = col * tileSize;
+            targetRow = row;
+            targetCol = col;
+            isMoving = false;
+            return;
         }
 
-        private double distanceToTarget(int fromRow, int fromCol, int wantedRow, int wantedCol) {
-            int rowDistance = fromRow - wantedRow;
-            int colDistance = fromCol - wantedCol;
+        targetRow = newRow;
+        targetCol = newCol;
+        isMoving = true;
+    }
 
-            return Math.sqrt(rowDistance * rowDistance + colDistance * colDistance);
-        }
+    private boolean isOppositeDirection(int newDirectionRow, int newDirectionCol) {
+        return newDirectionRow == -directionRow && newDirectionCol == -directionCol;
+    }
+
+    private double distanceToTarget(int fromRow, int fromCol, int wantedRow, int wantedCol) {
+        int rowDistance = fromRow - wantedRow;
+        int colDistance = fromCol - wantedCol;
+
+        return Math.sqrt(rowDistance * rowDistance + colDistance * colDistance);
+    }
 
     private void moveTowardsTarget() {
         double targetX = targetCol * tileSize;
@@ -315,9 +336,20 @@ public class Ghost {
     }
 
     public void setVulnerable(boolean vulnerable) {
-        this.vulnerable = vulnerable;
         if (released) {
             this.vulnerable = vulnerable;
+
+            if (!vulnerable) {
+                flashing = false;
+            }
+        }
+    }
+
+    public void setFlashing(boolean flashing) {
+        if (released && vulnerable) {
+            this.flashing = flashing;
+        } else {
+            this.flashing = false;
         }
     }
 
@@ -332,11 +364,15 @@ public class Ghost {
         y = startRow * tileSize;
         targetRow = startRow;
         targetCol = startCol;
+
         directionRow = 0;
         directionCol = 1;
+
         isMoving = false;
         vulnerable = false;
         released = false;
+        flashing = false;
+
         waitStartTime = System.currentTimeMillis();
     }
 

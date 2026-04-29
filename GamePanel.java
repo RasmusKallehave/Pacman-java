@@ -43,6 +43,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private boolean powerMode = false;
     private long powerModeStartTime = 0;
     private final int powerModeDuration = 6000;
+    private final int powerModeFlashTime = 2000;
 
     private final Set<Point> dots = new HashSet<>();
     private final Set<Point> powerPellets = new HashSet<>();
@@ -79,7 +80,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
     private void loadGhosts() {
         ghosts.add(new Ghost(9, 9, tileSize, rows, cols, 1.5, Color.RED, Ghost.Personality.CHASER, 0));
-        ghosts.add(new Ghost(9, 8, tileSize, rows, cols, 1.3, Color.PINK,Ghost.Personality.AMBUSHER, 3000));
+        ghosts.add(new Ghost(9, 8, tileSize, rows, cols, 1.3, Color.PINK, Ghost.Personality.AMBUSHER, 3000));
         ghosts.add(new Ghost(9, 10, tileSize, rows, cols, 1.0, Color.CYAN, Ghost.Personality.RANDOM, 6000));
     }
 
@@ -352,11 +353,23 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     }
 
     private void updatePowerMode() {
-        if (powerMode && System.currentTimeMillis() - powerModeStartTime >= powerModeDuration) {
+        if (!powerMode) {
+            return;
+        }
+
+        long elapsedTime = System.currentTimeMillis() - powerModeStartTime;
+        boolean shouldFlash = elapsedTime >= powerModeDuration - powerModeFlashTime;
+
+        for (Ghost ghost : ghosts) {
+            ghost.setFlashing(shouldFlash);
+        }
+
+        if (elapsedTime >= powerModeDuration) {
             powerMode = false;
 
             for (Ghost ghost : ghosts) {
                 ghost.setVulnerable(false);
+                ghost.setFlashing(false);
             }
         }
     }
@@ -367,6 +380,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
 
         for (Ghost ghost : ghosts) {
             ghost.setVulnerable(true);
+            ghost.setFlashing(false);
         }
     }
 
