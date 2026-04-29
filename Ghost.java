@@ -222,8 +222,29 @@ public class Ghost {
             directionRow = newDirectionRow;
             directionCol = newDirectionCol;
 
-            targetRow = row + directionRow;
-            targetCol = col + directionCol;
+            int newRow = row + directionRow;
+            int newCol = col + directionCol;
+
+            if (newCol < 0) {
+                col = cols - 1;
+                x = col * tileSize;
+                targetRow = row;
+                targetCol = col;
+                isMoving = false;
+                return;
+            }
+
+            if (newCol >= cols) {
+                col = 0;
+                x = col * tileSize;
+                targetRow = row;
+                targetCol = col;
+                isMoving = false;
+                return;
+            }
+
+            targetRow = newRow;
+            targetCol = newCol;
             isMoving = true;
         }
 
