@@ -32,6 +32,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     private boolean gameStarted = false;
     private boolean gamePaused = false;
     private boolean gameWon = false;
+    private boolean gameOver = false;
 
     private final int gameUpdateDelay = 16; // About 60 frames per second
     private final double pacmanSpeed = 2.0; // pixels pac-man moves per frame (speed)
@@ -85,7 +86,7 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
     }
 
     private void movePacman() {
-        if (!gameStarted || gameWon || gamePaused) {
+        if (!gameStarted || gameWon || gamePaused || gameOver) {
             return;
         }
 
@@ -192,6 +193,10 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         if (gameWon) {
             drawWinMessage(g);
         }
+
+        if (gameOver) {
+            drawGameOverMessage(g);
+        }
     }
 
     private void drawMaze(Graphics g) {
@@ -280,6 +285,8 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 16));
         g.drawString("Press P or ESC to continue", 120, 275);
+
+        g.drawString("Press R to restart", 155, 295);
     }
 
 
@@ -287,6 +294,25 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         g.setColor(Color.YELLOW);
         g.setFont(new Font("Arial", Font.BOLD, 28));
         g.drawString("YOU WIN!", 135, 260);
+
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 16));
+        g.drawString("Press R to restart", 145, 295);
+    }
+
+    private void drawGameOverMessage(Graphics g) {
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillRect(0, 0, cols * tileSize, rows * tileSize + 40);
+
+        g.setColor(Color.RED);
+        g.setFont(new Font("Arial", Font.BOLD, 36));
+        g.drawString("GAME OVER", 115, 240);
+
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 16));
+        g.drawString("Pac-Man was caught!", 145, 275);
+
+        g.drawString("Press R to restart", 160, 295);
     }
 
     private void updatePacmanMouth() {
@@ -303,19 +329,68 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
         }
     }
 
+    private void checkGhostCollision() {
+        Rectangle pacmanBounds = new Rectangle((int) pacmanX + 4, (int)pacmanY + 4, tileSize - 8, tileSize - 8);
+
+        for (Ghost ghost : ghosts) {
+            Rectangle ghostBounds = new Rectangle((int) ghost.getX() + 4, (int) ghost.getY() + 4, tileSize - 8, tileSize - 8);
+
+            if (pacmanBounds.intersects(ghostBounds)) {
+                gameOver = true;
+                return;
+            }
+        }
+    }
+
+    private void restartGame() {
+        pacmanRow = 15;
+        pacmanCol = 9;
+        pacmanX = pacmanCol * tileSize;
+        pacmanY = pacmanRow * tileSize;
+        targetRow = pacmanRow;
+        targetCol = pacmanCol;
+        pacmanIsMoving = false;
+
+        directionRow = 0;
+        directionCol = 0;
+        nextDirectionRow = 0;
+        nextDirectionCol = 0;
+
+        score = 0;
+        gameStarted = false;
+        gamePaused = false;
+        gameWon = false;
+        gameOver = false;
+
+        mouthSize = 35;
+        mouthChange = 3;
+
+        dots.clear();
+        ghosts.clear();
+        loadDots();
+        loadGhosts();
+    }
+
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (gameStarted && !gamePaused && !gameWon) {
+        if (gameStarted && !gamePaused && !gameWon && !gameOver) {
             updatePacmanMouth();
             updateGhosts();
+            movePacman();
+            checkGhostCollision();
         }
-        movePacman();
+
         repaint();
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
+
+        if (key == KeyEvent.VK_R && (gameOver || gameWon || gamePaused)) {
+            restartGame();
+            return;
+        }
 
         if (!gameStarted && (key == KeyEvent.VK_ENTER || key == KeyEvent.VK_SPACE)) {
             gameStarted = true;
@@ -327,9 +402,9 @@ public class GamePanel extends JPanel implements ActionListener, KeyListener {
             return;
         }
 
-        if (gameStarted && !gameWon && (key == KeyEvent.VK_ESCAPE)) {
+        if (gameStarted && !gameWon && !gameOver && (key == KeyEvent.VK_ESCAPE)) {
             gamePaused = !gamePaused;
-            return ;
+            return;
         }
 
         if (gamePaused) {

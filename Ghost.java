@@ -222,4 +222,12 @@ public class Ghost {
 
         return GameMap.MAP[checkRow].charAt(checkCol) == '#';
     }
+
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
 }
